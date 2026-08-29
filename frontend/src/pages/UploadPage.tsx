@@ -177,18 +177,14 @@ export function UploadPage() {
             <MaterialIcon name="history" className="text-sm text-amber-500" />
             Scan History
           </button>
-          <button
-            onClick={() => navigate('/login')}
-            className="px-3.5 py-1.5 rounded-lg border border-white/10 text-xs font-mono text-slate-300 hover:text-amber-400 hover:border-amber-500/40 transition-colors bg-[#07090E]"
+            <button
+            onClick={() => navigate('/account')}
+            className="btn-secondary text-xs px-3.5 py-2 hidden sm:flex items-center gap-1.5"
           >
-            Sign In
+            <MaterialIcon name="account_circle" className="text-sm text-amber-500" />
+            Account Settings
           </button>
-          <button
-            onClick={() => navigate('/signup')}
-            className="btn-primary text-xs px-3.5 py-1.5 hidden sm:inline-flex"
-          >
-            Sign Up
-          </button>
+         
         </div>
       </header>
 
@@ -242,7 +238,7 @@ export function UploadPage() {
           </div>
 
           {/* Sample Analysis Packages Section */}
-          <div className="space-y-3">
+          {/* <div className="space-y-3">
             <p className="font-mono text-xs text-slate-400 uppercase tracking-wider font-bold">
               Select Target Analysis Package:
             </p>
@@ -282,7 +278,7 @@ export function UploadPage() {
                 );
               })}
             </div>
-          </div>
+          </div> */}
 
           {/* 6-Factor Scoring Reference Card */}
           <div className="glass-panel p-4 border-white/10 space-y-3">
