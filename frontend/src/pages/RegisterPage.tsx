@@ -18,17 +18,28 @@ export function RegisterPage() {
   // Message from ProtectedRoute if user tried to access workspace without signing up
   const redirectMessage = (location.state as any)?.message;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) {
       alert("Passwords do not match!");
       return;
     }
-    register(fullName || 'Security Analyst', email, role);
-    if (role === 'admin') {
-      navigate('/admin');
-    } else {
-      navigate('/dashboard');
+    setErrorMsg(null);
+    setIsLoading(true);
+    try {
+      await register(fullName || 'Security Analyst', email, role, password);
+      if (role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Registration failed');
+    } finally {
+      setIsLoading(false);
     }
   };
 

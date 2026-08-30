@@ -1,7 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AppLayout } from '../components/layout';
 import { TopBar } from '../components/layout';
 import { MaterialIcon } from '../components/ui/MaterialIcon';
+import {
+  getAdminUsers,
+  createAdminUser,
+  updateUserRole,
+  updateUserStatus,
+  getAdminAuditLogs,
+} from '../services/api';
 
 interface SystemUser {
   id: string;
@@ -52,7 +59,7 @@ const INITIAL_USERS: SystemUser[] = [
   },
 ];
 
-const AUDIT_LOGS = [
+const INITIAL_AUDIT_LOGS = [
   { id: 'log_1', time: '14:52:10', event: 'User Login', user: 'admin@intentguard.sec', role: 'admin', ip: '192.168.1.10', severity: 'info' },
   { id: 'log_2', time: '14:48:32', event: 'Scan Initiated', user: 'sarah.c@fintech.sec', role: 'user', ip: '192.168.1.45', severity: 'info' },
   { id: 'log_3', time: '14:15:00', event: 'Threshold Policy Updated', user: 'admin@intentguard.sec', role: 'admin', ip: '192.168.1.10', severity: 'warning' },
@@ -63,6 +70,7 @@ const AUDIT_LOGS = [
 export function AdminPage() {
   const [activeTab, setActiveTab] = useState<'users' | 'audit' | 'policy'>('users');
   const [users, setUsers] = useState<SystemUser[]>(INITIAL_USERS);
+  const [auditLogs, setAuditLogs] = useState<any[]>(INITIAL_AUDIT_LOGS);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'user'>('all');
 
@@ -78,15 +86,49 @@ export function AdminPage() {
     rateLimit: 100,
   });
 
-  const handleToggleStatus = (id: string) => {
-    setUsers(users.map(u => u.id === id ? { ...u, status: u.status === 'active' ? 'suspended' : 'active' } : u));
+  const loadData = async () => {
+    try {
+      const u = await getAdminUsers();
+      if (Array.isArray(u) && u.length > 0) setUsers(u);
+    } catch {
+      // Keep default
+    }
+    try {
+      const logs = await getAdminAuditLogs();
+      if (Array.isArray(logs) && logs.length > 0) setAuditLogs(logs);
+    } catch {
+      // Keep default
+    }
   };
 
-  const handleRoleChange = (id: string, newRole: 'admin' | 'user') => {
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleToggleStatus = async (id: string) => {
+    const target = users.find(u => u.id === id);
+    if (!target) return;
+    const nextStatus = target.status === 'active' ? 'suspended' : 'active';
+    setUsers(users.map(u => u.id === id ? { ...u, status: nextStatus } : u));
+    try {
+      await updateUserStatus(id, nextStatus);
+      loadData();
+    } catch (err) {
+      console.warn('Status update API call failed:', err);
+    }
+  };
+
+  const handleRoleChange = async (id: string, newRole: 'admin' | 'user') => {
     setUsers(users.map(u => u.id === id ? { ...u, role: newRole } : u));
+    try {
+      await updateUserRole(id, newRole);
+      loadData();
+    } catch (err) {
+      console.warn('Role update API call failed:', err);
+    }
   };
 
-  const handleCreateUser = (e: React.FormEvent) => {
+  const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newUser.name || !newUser.email) return;
     const created: SystemUser = {
@@ -99,6 +141,12 @@ export function AdminPage() {
       lastActive: 'Just registered',
     };
     setUsers([...users, created]);
+    try {
+      await createAdminUser(newUser);
+      loadData();
+    } catch (err) {
+      console.warn('Create user API call failed:', err);
+    }
     setNewUser({ name: '', email: '', role: 'user', organization: '' });
     setShowAddUserModal(false);
   };
@@ -283,7 +331,7 @@ export function AdminPage() {
             </div>
 
             <div className="space-y-3 font-mono text-xs">
-              {AUDIT_LOGS.map((log) => (
+              {auditLogs.map((log) => (
                 <div key={log.id} className="p-3.5 bg-[#07090E] rounded-xl border border-white/10 flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
                   <div className="flex items-center gap-3">
                     <span className="text-slate-500 text-xs font-bold">{log.time}</span>

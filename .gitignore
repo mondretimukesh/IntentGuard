@@ -1,0 +1,22 @@
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/tsconfig.tsbuildinfo
+
+# Backend
+Backend/venv/
+Backend/__pycache__/
+Backend/**/*.pyc
+Backend/intentguard.db
+
+# Environment
+Backend/.env
+
+# Python
+__pycache__/
+*.py[cod]
+
+# IDE
+.vscode/
+.idea/
