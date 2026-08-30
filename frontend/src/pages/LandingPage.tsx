@@ -1,6 +1,7 @@
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { MaterialIcon } from '../components/ui/MaterialIcon';
-import { RiskGauge } from '../components/ui/RiskGauge';
+import { ThreatCore3D } from '../components/landing/ThreatCore3D';
 
 const threatCards = [
   { icon: 'accessibility_new', title: 'Accessibility Service Abuse', desc: 'Allows silent interaction with banking and auth dialogs without user consent.' },
@@ -174,41 +175,9 @@ export function LandingPage() {
               </div>
             </div>
 
-            {/* Right Hero Visual Card */}
-            <div className="relative flex justify-center items-center">
-              <div className="glass-panel p-6 w-full max-w-[420px] relative z-10 border-amber-500/30 animate-float shadow-2xl">
-                <div className="flex justify-between items-center mb-4 pb-3 border-b border-white/10">
-                  <div>
-                    <span className="font-mono text-xs text-slate-400 block">com.bank.overlay.trojan</span>
-                    <span className="font-heading text-sm font-bold text-white">Banking Trojan Overlay</span>
-                  </div>
-                  <span className="px-2.5 py-1 rounded-full bg-red-500/10 text-red-400 border border-red-500/30 font-mono text-xs font-bold flex items-center gap-1">
-                    <MaterialIcon name="warning" className="text-sm" />
-                    Score 85
-                  </span>
-                </div>
-
-                <div className="mb-4 flex justify-center">
-                  <RiskGauge score={85} color="#F59E0B" size={170} label="Contextual Risk" />
-                </div>
-
-                <div className="space-y-2">
-                  {[
-                    { perm: 'BIND_ACCESSIBILITY_SERVICE', icon: 'verified_user', color: '#EF4444', border: '#EF4444' },
-                    { perm: 'SYSTEM_ALERT_WINDOW', icon: 'layers', color: '#F59E0B', border: '#F59E0B' },
-                    { perm: 'RECEIVE_SMS', icon: 'chat', color: '#F59E0B', border: undefined },
-                  ].map((item) => (
-                    <div
-                      key={item.perm}
-                      className="flex justify-between items-center p-2.5 bg-[#07090E] rounded-lg border border-white/10"
-                      style={item.border ? { borderLeft: `3px solid ${item.border}` } : undefined}
-                    >
-                      <span className="font-mono text-xs text-slate-200">{item.perm}</span>
-                      <MaterialIcon name={item.icon} className="text-base" style={{ color: item.color }} />
-                    </div>
-                  ))}
-                </div>
-              </div>
+            {/* Right Hero Threat Core Visual Card */}
+            <div className="relative flex justify-center items-center w-full">
+              <ThreatCore3D score={85} />
             </div>
           </div>
         </section>

@@ -88,7 +88,7 @@ export function SettingsPage() {
 
       <main className="p-6 lg:p-8 max-w-5xl mx-auto w-full space-y-8">
         {/* Quick Auth Actions Banner */}
-        <div className="glass-panel p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-amber-500/30">
+        {/* <div className="glass-panel p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-amber-500/30">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center">
               <MaterialIcon name="account_circle" className="text-amber-500 text-xl" />
@@ -106,7 +106,7 @@ export function SettingsPage() {
               Sign Up
             </Link>
           </div>
-        </div>
+        </div> */}
 
         {/* Section 1: User Account Profile */}
         <section className="glass-panel p-6 space-y-6 border-white/10">
@@ -178,7 +178,7 @@ export function SettingsPage() {
             </div>
             <div>
               <h3 className="font-heading text-lg font-bold text-white">Account Password & Security</h3>
-              <p className="font-mono text-xs text-slate-400">Password updates and security email alerts</p>
+              <p className="font-mono text-xs text-slate-400">Password updates </p>
             </div>
           </div>
 
@@ -230,7 +230,7 @@ export function SettingsPage() {
             </form>
 
             {/* Notification Toggles */}
-            <div className="space-y-6 font-mono text-xs">
+            {/* <div className="space-y-6 font-mono text-xs">
               <h4 className="font-heading text-sm font-bold text-white uppercase tracking-wider">Security Notifications</h4>
 
               <div className="flex items-center justify-between p-4 bg-[#07090E] rounded-xl border border-white/10">
@@ -247,7 +247,7 @@ export function SettingsPage() {
                   <div className={`w-4 h-4 rounded-full bg-[#07090E] transition-transform ${account.emailAlerts ? 'translate-x-6' : ''}`} />
                 </button>
               </div>
-            </div>
+            </div> */}
           </div>
         </section>
 
