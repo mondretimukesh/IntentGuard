@@ -1,15 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { AppLayout } from '../components/layout';
 import { TopBar } from '../components/layout';
 import { MaterialIcon } from '../components/ui/MaterialIcon';
+import { useAuth } from '../context/AuthContext';
+import { changePasswordApi, getSettings, updateSettings } from '../services/api';
 
 export function SettingsPage() {
+  const { user } = useAuth();
+
   // User Account State
   const [account, setAccount] = useState({
-    name: 'Bharath',
-    email: 'bharath@intentguard.sec',
-    role: 'Lead Security Analyst',
+    name: user?.name || 'Bharath',
+    email: user?.email || 'bharath@intentguard.sec',
+    role: user?.role === 'admin' ? 'Platform Administrator' : 'Lead Security Analyst',
     emailAlerts: true,
   });
 
@@ -22,13 +26,59 @@ export function SettingsPage() {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [passwordForm, setPasswordForm] = useState({ current: '', new: '', confirm: '' });
   const [showPasswordSuccess, setShowPasswordSuccess] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
-  const handlePasswordSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    async function loadBackendSettings() {
+      try {
+        const s = await getSettings();
+        if (s) {
+          setPreferences({
+            autoDeleteApks: s.autoDeleteApks ?? true,
+            retainHistory: s.retainHistory ?? true,
+          });
+        }
+      } catch {
+        // Fallback to local state
+      }
+    }
+    loadBackendSettings();
+  }, []);
+
+  const handleToggleAutoDelete = async () => {
+    const next = !preferences.autoDeleteApks;
+    setPreferences(prev => ({ ...prev, autoDeleteApks: next }));
+    try {
+      await updateSettings({ autoDeleteApks: next });
+    } catch (err) {
+      console.warn('Update settings API failed:', err);
+    }
+  };
+
+  const handleToggleRetainHistory = async () => {
+    const next = !preferences.retainHistory;
+    setPreferences(prev => ({ ...prev, retainHistory: next }));
+    try {
+      await updateSettings({ retainHistory: next });
+    } catch (err) {
+      console.warn('Update settings API failed:', err);
+    }
+  };
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (passwordForm.new && passwordForm.new === passwordForm.confirm) {
+    setPasswordError(null);
+    if (!passwordForm.new || passwordForm.new !== passwordForm.confirm) {
+      setPasswordError("New passwords do not match!");
+      return;
+    }
+    try {
+      await changePasswordApi(passwordForm.current, passwordForm.new);
       setShowPasswordSuccess(true);
       setPasswordForm({ current: '', new: '', confirm: '' });
       setTimeout(() => setShowPasswordSuccess(false), 3000);
+    } catch (err: any) {
+      setPasswordError(err.message || "Failed to update password");
     }
   };
 
@@ -220,7 +270,7 @@ export function SettingsPage() {
                 <p className="text-slate-400 font-body text-xs mt-0.5">Purge uploaded payload after static extraction</p>
               </div>
               <button
-                onClick={() => setPreferences({ ...preferences, autoDeleteApks: !preferences.autoDeleteApks })}
+                onClick={handleToggleAutoDelete}
                 className={`w-12 h-6 rounded-full p-1 transition-colors ${
                   preferences.autoDeleteApks ? 'bg-amber-500' : 'bg-white/10'
                 }`}
@@ -235,7 +285,7 @@ export function SettingsPage() {
                 <p className="text-slate-400 font-body text-xs mt-0.5">Save completed reports across browser sessions</p>
               </div>
               <button
-                onClick={() => setPreferences({ ...preferences, retainHistory: !preferences.retainHistory })}
+                onClick={handleToggleRetainHistory}
                 className={`w-12 h-6 rounded-full p-1 transition-colors ${
                   preferences.retainHistory ? 'bg-amber-500' : 'bg-white/10'
                 }`}

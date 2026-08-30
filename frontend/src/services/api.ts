@@ -11,6 +11,7 @@ import type {
 const STORAGE_KEYS = {
   SETTINGS: 'intentguard_settings_v1',
   API_CONFIG: 'intentguard_api_config_v1',
+  TOKEN: 'intentguard_token',
 };
 
 export interface ApiConfig {
@@ -45,6 +46,200 @@ export function setStoredApiConfig(config: ApiConfig): void {
   localStorage.setItem(STORAGE_KEYS.API_CONFIG, JSON.stringify(config));
 }
 
+export function getAuthToken(): string | null {
+  return localStorage.getItem(STORAGE_KEYS.TOKEN);
+}
+
+export function setAuthToken(token: string): void {
+  localStorage.setItem(STORAGE_KEYS.TOKEN, token);
+}
+
+export function clearAuthToken(): void {
+  localStorage.removeItem(STORAGE_KEYS.TOKEN);
+}
+
+export function getAuthHeaders(): Record<string, string> {
+  const config = getStoredApiConfig();
+  const token = getAuthToken();
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  if (config.apiKey) {
+    headers['X-API-Key'] = config.apiKey;
+  }
+  return headers;
+}
+
+// ── AUTHENTICATION API CALLS ──────────────────────────────────────
+
+export interface AuthResponseData {
+  token: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    role: 'user' | 'admin';
+    status: string;
+    organization?: string;
+  };
+}
+
+export async function loginUser(email: string, password: string): Promise<AuthResponseData> {
+  const config = getStoredApiConfig();
+  const res = await fetch(`${config.baseUrl}/api/auth/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify({ email, password }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Authentication failed' }));
+    throw new Error(err.detail || 'Authentication failed');
+  }
+
+  const data: AuthResponseData = await res.json();
+  if (data.token) {
+    setAuthToken(data.token);
+  }
+  return data;
+}
+
+export async function registerUser(
+  fullName: string,
+  email: string,
+  password: string,
+  role: 'user' | 'admin' = 'user',
+  organization?: string
+): Promise<AuthResponseData> {
+  const config = getStoredApiConfig();
+  const res = await fetch(`${config.baseUrl}/api/auth/register`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify({ fullName, email, password, role, organization }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Registration failed' }));
+    throw new Error(err.detail || 'Registration failed');
+  }
+
+  const data: AuthResponseData = await res.json();
+  if (data.token) {
+    setAuthToken(data.token);
+  }
+  return data;
+}
+
+export async function getCurrentUserProfile() {
+  const config = getStoredApiConfig();
+  const res = await fetch(`${config.baseUrl}/api/auth/me`, {
+    headers: getAuthHeaders(),
+  });
+
+  if (!res.ok) {
+    throw new Error('Failed to fetch user profile');
+  }
+  return await res.json();
+}
+
+export async function changePasswordApi(currentPassword: string, newPassword: string) {
+  const config = getStoredApiConfig();
+  const res = await fetch(`${config.baseUrl}/api/auth/change-password`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Password update failed' }));
+    throw new Error(err.detail || 'Password update failed');
+  }
+  return await res.json();
+}
+
+// ── ADMIN MANAGEMENT API CALLS ───────────────────────────────────
+
+export async function getAdminUsers() {
+  const config = getStoredApiConfig();
+  const res = await fetch(`${config.baseUrl}/api/admin/users`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    throw new Error('Failed to fetch admin users');
+  }
+  return await res.json();
+}
+
+export async function createAdminUser(user: { name: string; email: string; role: 'user' | 'admin'; organization?: string }) {
+  const config = getStoredApiConfig();
+  const res = await fetch(`${config.baseUrl}/api/admin/users`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify({ fullName: user.name, name: user.name, email: user.email, role: user.role, organization: user.organization }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Failed to create user' }));
+    throw new Error(err.detail || 'Failed to create user');
+  }
+  return await res.json();
+}
+
+export async function updateUserRole(userId: string, role: 'user' | 'admin') {
+  const config = getStoredApiConfig();
+  const res = await fetch(`${config.baseUrl}/api/admin/users/${userId}/role`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify({ role }),
+  });
+  if (!res.ok) {
+    throw new Error('Failed to update user role');
+  }
+  return await res.json();
+}
+
+export async function updateUserStatus(userId: string, status: 'active' | 'suspended') {
+  const config = getStoredApiConfig();
+  const res = await fetch(`${config.baseUrl}/api/admin/users/${userId}/status`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify({ status }),
+  });
+  if (!res.ok) {
+    throw new Error('Failed to update user status');
+  }
+  return await res.json();
+}
+
+export async function getAdminAuditLogs() {
+  const config = getStoredApiConfig();
+  const res = await fetch(`${config.baseUrl}/api/admin/audit-logs`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    throw new Error('Failed to fetch audit logs');
+  }
+  return await res.json();
+}
+
 // ── DIRECT REST API CALLS TO BACKEND ──────────────────────────────
 
 /**
@@ -65,7 +260,7 @@ export async function analyzeApk(
 
   const res = await fetch(`${config.baseUrl}/api/analyze`, {
     method: 'POST',
-    headers: config.apiKey ? { 'X-API-Key': config.apiKey } : {},
+    headers: getAuthHeaders(),
     body: formData,
   });
 
@@ -82,7 +277,7 @@ export async function analyzeApk(
 export async function getJobStatus(jobId: string): Promise<AnalysisJobResponse> {
   const config = getStoredApiConfig();
   const res = await fetch(`${config.baseUrl}/api/analyze/${jobId}`, {
-    headers: config.apiKey ? { 'X-API-Key': config.apiKey } : {},
+    headers: getAuthHeaders(),
   });
 
   if (!res.ok) {
@@ -98,7 +293,7 @@ export async function getJobStatus(jobId: string): Promise<AnalysisJobResponse> 
 export async function getReport(id: string): Promise<AnalysisReport> {
   const config = getStoredApiConfig();
   const res = await fetch(`${config.baseUrl}/api/report/${id}`, {
-    headers: config.apiKey ? { 'X-API-Key': config.apiKey } : {},
+    headers: getAuthHeaders(),
   });
 
   if (!res.ok) {
@@ -114,7 +309,7 @@ export async function getReport(id: string): Promise<AnalysisReport> {
 export async function exportReportPdf(id: string): Promise<Blob> {
   const config = getStoredApiConfig();
   const res = await fetch(`${config.baseUrl}/api/report/${id}/export`, {
-    headers: config.apiKey ? { 'X-API-Key': config.apiKey } : {},
+    headers: getAuthHeaders(),
   });
 
   if (!res.ok) {
@@ -141,7 +336,7 @@ export async function getScanHistory(params?: {
   });
 
   const res = await fetch(`${config.baseUrl}/api/history?${query}`, {
-    headers: config.apiKey ? { 'X-API-Key': config.apiKey } : {},
+    headers: getAuthHeaders(),
   });
 
   if (!res.ok) {
@@ -158,7 +353,7 @@ export async function deleteScanRecord(id: string): Promise<void> {
   const config = getStoredApiConfig();
   const res = await fetch(`${config.baseUrl}/api/history/${id}`, {
     method: 'DELETE',
-    headers: config.apiKey ? { 'X-API-Key': config.apiKey } : {},
+    headers: getAuthHeaders(),
   });
 
   if (!res.ok) {
@@ -172,7 +367,7 @@ export async function deleteScanRecord(id: string): Promise<void> {
 export async function getSettings(): Promise<AppSettings> {
   const config = getStoredApiConfig();
   const res = await fetch(`${config.baseUrl}/api/settings`, {
-    headers: config.apiKey ? { 'X-API-Key': config.apiKey } : {},
+    headers: getAuthHeaders(),
   });
 
   if (!res.ok) {
@@ -191,7 +386,7 @@ export async function updateSettings(partial: Partial<AppSettings>): Promise<App
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
-      ...(config.apiKey ? { 'X-API-Key': config.apiKey } : {}),
+      ...getAuthHeaders(),
     },
     body: JSON.stringify(partial),
   });
@@ -209,7 +404,7 @@ export async function updateSettings(partial: Partial<AppSettings>): Promise<App
 export async function getRiskWeights(): Promise<RiskWeights> {
   const config = getStoredApiConfig();
   const res = await fetch(`${config.baseUrl}/api/settings/risk-weights`, {
-    headers: config.apiKey ? { 'X-API-Key': config.apiKey } : {},
+    headers: getAuthHeaders(),
   });
 
   if (!res.ok) {
@@ -225,7 +420,7 @@ export async function getRiskWeights(): Promise<RiskWeights> {
 export async function getThreatIntelSources(): Promise<ThreatIntelSource[]> {
   const config = getStoredApiConfig();
   const res = await fetch(`${config.baseUrl}/api/settings/threat-intel-sources`, {
-    headers: config.apiKey ? { 'X-API-Key': config.apiKey } : {},
+    headers: getAuthHeaders(),
   });
 
   if (!res.ok) {
@@ -240,28 +435,36 @@ export async function getThreatIntelSources(): Promise<ThreatIntelSource[]> {
  */
 export async function getHealthStatus(customUrl?: string): Promise<HealthStatus> {
   const config = getStoredApiConfig();
-  const targetUrl = customUrl || config.baseUrl;
+  const candidateUrls = customUrl
+    ? [customUrl]
+    : [config.baseUrl, 'http://localhost:8000', 'http://127.0.0.1:8000', 'http://127.0.0.1:8001'];
 
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000);
+  for (const url of candidateUrls) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
 
-    const res = await fetch(`${targetUrl}/api/health`, {
-      headers: config.apiKey ? { 'X-API-Key': config.apiKey } : {},
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
+      const res = await fetch(`${url}/api/health`, {
+        headers: getAuthHeaders(),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
 
-    if (res.ok) {
-      const data = await res.json();
-      return {
-        status: 'ok',
-        version: data.version || '1.4.0',
-        timestamp: data.timestamp || new Date().toISOString(),
-      };
+      if (res.ok) {
+        const data = await res.json();
+        // If discovered on another working candidate URL, update stored config
+        if (!customUrl && url !== config.baseUrl) {
+          setStoredApiConfig({ ...config, baseUrl: url });
+        }
+        return {
+          status: 'ok',
+          version: data.version || '1.4.0',
+          timestamp: data.timestamp || new Date().toISOString(),
+        };
+      }
+    } catch {
+      // Continue probing next candidate
     }
-  } catch {
-    // Backend offline response
   }
 
   return {
